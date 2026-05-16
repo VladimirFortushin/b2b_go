@@ -41,7 +41,6 @@ func main() {
 	svc := service.NewBankService(repo, cbrClient, emailSender, cfg.JWTSecret, cfg.HMACSecret)
 	h := handler.NewHandler(svc)
 
-	// шедулер просроченных платежей
 	go func() {
 		for {
 			time.Sleep(12 * time.Hour)
@@ -51,11 +50,9 @@ func main() {
 
 	r := mux.NewRouter()
 
-	// Публичные
 	r.HandleFunc("/register", h.Register).Methods("POST")
 	r.HandleFunc("/login", h.Login).Methods("POST")
 
-	// Защищённые
 	auth := r.PathPrefix("/").Subrouter()
 	auth.Use(middleware.AuthMiddleware(cfg.JWTSecret))
 
