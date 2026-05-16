@@ -5,6 +5,7 @@ import "os"
 type Config struct {
 	DatabaseURL string
 	JWTSecret   string
+	HMACSecret  string
 	SMTP        SMTPConfig
 }
 
@@ -19,6 +20,7 @@ func Load() *Config {
 	return &Config{
 		DatabaseURL: getEnv("DATABASE_URL", "postgres://postgres:postgres@localhost/bank?sslmode=disable"),
 		JWTSecret:   getEnv("JWT_SECRET", "my-super-secret-key"),
+		HMACSecret:  getEnv("HMAC_SECRET", "hmac-secret-256"),
 		SMTP: SMTPConfig{
 			Host:     getEnv("SMTP_HOST", "localhost"),
 			Port:     587,

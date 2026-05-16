@@ -7,6 +7,8 @@ import (
 
 	"b2b-go.local/internal/models"
 	"b2b-go.local/internal/service"
+
+	"github.com/gorilla/mux"
 )
 
 type Handler struct {
@@ -89,16 +91,89 @@ func (h *Handler) Transfer(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 }
 
-// Заглушки для остальных эндпоинтов
 func (h *Handler) IssueCard(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "not implemented", http.StatusNotImplemented)
+	userID, _ := strconv.Atoi(r.Context().Value("userID").(string))
+	var req models.IssueCardRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid body", http.StatusBadRequest)
+		return
+	}
+	card, err := h.svc.IssueCard(userID, req.AccountID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusForbidden)
+		return
+	}
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(card)
 }
+
+func (h *Handler) GetCards(w http.ResponseWriter, r *http.Request) {
+	userID, _ := strconv.Atoi(r.Context().Value("userID").(string))
+	cards, err := h.svc.GetCards(userID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	json.NewEncoder(w).Encode(cards)
+}
+
 func (h *Handler) ApplyCredit(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "not implemented", http.StatusNotImplemented)
+	userID, _ := strconv.Atoi(r.Context().Value("userID").(string))
+	var req models.ApplyCreditRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid body", http.StatusBadRequest)
+		return
+	}
+	credit, err := h.svc.ApplyCredit(userID, req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusForbidden)
+		return
+	}
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(credit)
 }
+
 func (h *Handler) CreditSchedule(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "not implemented", http.StatusNotImplemented)
+	vars := mux.Vars(r)
+	creditID, _ := strconv.Atoi(vars["creditId"])
+	schedule, err := h.svc.GetCreditSchedule(creditID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	json.NewEncoder(w).Encode(schedule)
 }
+
 func (h *Handler) Analytics(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "not implemented", http.StatusNotImplemented)
+	userID, _ := strconv.Atoi(r.Context().Value("userID").(string))
+	analytics, err := h.svc.GetAnalytics(userID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	json.NewEncoder(w).Encode(analytics)
+}
+
+func (h *Handler) PredictBalance(w http.ResponseWriter, r *http.Request) {
+	userID, _ := strconv.Atoi(r.Context().Value("userID").(string))
+	vars := mux.Vars(r)
+	accountID, _ := strconv.Atoi(vars["accountId"])
+	daysStr := r.URL.Query().Get("days")
+	days, _ := strconv.Atoi(daysStr)
+	if days > 365 {
+		days = 365
+	}
+
+	analytics, err := h.svc.GetAnalytics(userID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	_ = accountID
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"account_id": accountID,
+		"days":       days,
+		"forecast":   analytics.BalanceForecast,
+	})
 }
